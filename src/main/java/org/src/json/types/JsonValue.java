@@ -12,6 +12,7 @@ public interface JsonValue {
     ValueType getValueType();
 
     String toString();
+
     enum ValueType {
         ARRAY,
         FALSE,
@@ -20,9 +21,10 @@ public interface JsonValue {
         OBJECT,
         STRING,
         TRUE;
+
         @Override
         public String toString() {
-            return switch (this){
+            return switch (this) {
                 case NULL -> "null";
                 case TRUE -> "true";
                 case FALSE -> "false";

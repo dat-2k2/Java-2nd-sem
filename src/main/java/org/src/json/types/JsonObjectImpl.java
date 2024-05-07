@@ -1,11 +1,13 @@
 package org.src.json.types;
 
-import java.io.Serial;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
 public record JsonObjectImpl(Map<String, JsonValue> data) implements JsonObject {
+
+    public static void main(String[] args) {
+
+    }
 
     @Override
     public boolean getBoolean(String name) {
@@ -18,7 +20,6 @@ public record JsonObjectImpl(Map<String, JsonValue> data) implements JsonObject 
             default -> throw new ClassCastException("Value is not a JSON boolean");
         };
     }
-
 
     @Override
     public JsonNumber getJsonNumber(String name) throws ClassCastException, NullPointerException {
@@ -83,29 +84,25 @@ public record JsonObjectImpl(Map<String, JsonValue> data) implements JsonObject 
     }
 
     @Override
-    public String toString(){
+    public String toString() {
         StringBuffer repr = new StringBuffer("{");
         data.forEach(
                 (key, value) -> repr.
                         append("\"").append(key).append("\"")
                         .append(": ")
                         .append(
-                        (value.getValueType() == ValueType.TRUE) ? "true" : (
-                                value.getValueType() == ValueType.FALSE ? "false" :(
-                                        value.getValueType() == ValueType.NULL ? "null" :
-                                                value.getValueType() == ValueType.STRING ? ("\"" + value + "\""):
-                                                        value
+                                (value.getValueType() == ValueType.TRUE) ? "true" : (
+                                        value.getValueType() == ValueType.FALSE ? "false" : (
+                                                value.getValueType() == ValueType.NULL ? "null" :
+                                                        value.getValueType() == ValueType.STRING ? ("\"" + value + "\"") :
+                                                                value
                                         )
                                 )
                         )
                         .append(",")
         );
-        repr.deleteCharAt(repr.length()-1);
+        repr.deleteCharAt(repr.length() - 1);
         repr.append("}");
         return repr.toString();
-    }
-
-    public static void main(String[] args) {
-
     }
 }

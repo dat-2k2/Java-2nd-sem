@@ -1,6 +1,6 @@
 package org.src.json;
 
-import org.src.json.types.*;
+import org.src.json.types.JsonValue;
 
 import java.text.ParseException;
 

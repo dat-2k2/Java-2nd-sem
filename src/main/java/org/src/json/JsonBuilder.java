@@ -4,101 +4,128 @@ import org.src.json.types.*;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
-import java.util.*;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 public class JsonBuilder {
 
-    public static JsonNumber buildJsonNumber(Number number){
+    public static JsonNumber buildJsonNumber(Number number) {
         return new JsonNumber(number.toString());
     }
 
-    public static JsonString buildJsonString(StringBuffer stringBuffer){
-        return new JsonString(stringBuffer.toString());
-    }
-
-    public static JsonString buildJsonString(String string){
+    public static JsonString buildJsonString(String string) {
         return new JsonString(string);
     }
 
     // Only accept
-    public static JsonArray buildJsonArray(Collection<?> array){
+    public static JsonArray buildJsonArray(Collection<?> array) {
         return buildJsonArray(array.toArray());
     }
 
     /**
      * Receive C-style array (immutable data)
+     *
      * @param array
      * @return
      */
-    public static JsonArray buildJsonArray(Object array){
-        if (!array.getClass().isArray()){
+    public static JsonArray buildJsonArray(Object array) {
+        if (!array.getClass().isArray()) {
             throw new ClassCastException("Not a C-style array");
         }
 
         if (Array.getLength(array) == 0)
             return new JsonArray(new JsonValue[]{});
-        else{
+        else {
             var result = new ArrayList<JsonValue>(Array.getLength(array));
             var cType = array.getClass().getComponentType();
 
-            for (int i = 0; i < Array.getLength(array); i++){
-                if (Array.get(array,i) == null)
+            for (int i = 0; i < Array.getLength(array); i++) {
+                if (Array.get(array, i) == null)
                     result.add(JsonValue.NULL);
                 else if (cType.isArray()) {
                     result.add(
-                            buildJsonArray(Array.get(array,i))
+                            buildJsonArray(Array.get(array, i))
                     );
                 } else if (cType.equals(boolean.class) || cType.equals(Boolean.class)) {
-                    if ((Boolean) Array.get(array,i))
-                        result.add( JsonValue.TRUE);
+                    if ((Boolean) Array.get(array, i))
+                        result.add(JsonValue.TRUE);
                     else
-                        result.add( JsonValue.FALSE);
+                        result.add(JsonValue.FALSE);
                 } else if (
                         cType.equals(byte.class) || cType.equals(Byte.class) ||
-                        cType.equals(int.class) || cType.equals(Integer.class) ||
-                        cType.equals(long.class) || cType.equals(Long.class) ||
-                        cType.equals(float.class) || cType.equals(Float.class) ||
-                        cType.equals(double.class) || cType.equals(Double.class)
-                ){
+                                cType.equals(int.class) || cType.equals(Integer.class) ||
+                                cType.equals(long.class) || cType.equals(Long.class) ||
+                                cType.equals(float.class) || cType.equals(Float.class) ||
+                                cType.equals(double.class) || cType.equals(Double.class)
+                ) {
                     result.add(
-                            buildJsonNumber((Number) Array.get(array,i))
+                            buildJsonNumber((Number) Array.get(array, i))
                     );
                 } else if (
                         cType.equals(char.class) || cType.equals(Character.class) ||
-                        cType.equals(String.class)
-                ){
+                                cType.equals(String.class)
+                ) {
                     result.add(
-                            buildJsonString((String) Array.get(array,i))
+                            buildJsonString((String) Array.get(array, i))
                     );
-                }
-                else result.add(
-                            buildJsonObject(Array.get(array,i))
+                } else result.add(
+                            buildJsonObject(Array.get(array, i))
                     );
             }
             return new JsonArray(result.toArray(new JsonValue[0])); // JVM creates a new array with fit size.
         }
     }
 
+    private static String getPossibleGetter(Field _f) {
+        String name = _f.getName();
+        return "get" + String.valueOf(name.charAt(0)).toUpperCase() + name.substring(1);
+    }
+
     public static JsonObject buildJsonObject(Object o) {
+
         Class<?> c = o.getClass();
-        Field f[] = c.getDeclaredFields();
+        Field[] f = c.getDeclaredFields();
+        for (Field field : f) {
+            System.out.println(field.getName());
+        }
         Map<String, JsonValue> data = new HashMap<>();
 
-        for (var field: f){
+        for (var field : f) {
 // firstly put Object as the field class. If the value can't be get, set as null (like in js).
-            Object value = null;
+            Object value;
 
+            field.setAccessible(true);
             try {
                 value = field.get(o);
-            }catch (IllegalAccessException | NullPointerException e){
-                data.put(field.getName(), JsonValue.NULL);
-                continue;
-            } catch (Exception e){ // smth serious happened
+            } catch (IllegalAccessException e) {
+                Method possibleGetter;
+                try {
+                    possibleGetter = c.getMethod(getPossibleGetter(field));
+                } catch (NoSuchMethodException ex) {
+                    System.out.println("Couldn't find any getter named " + getPossibleGetter(field) + ", set the field value to null");
+                    data.put(field.getName(), JsonValue.NULL);
+                    continue;
+                }
+
+                try {
+                    possibleGetter.setAccessible(true);
+                    value = possibleGetter.invoke(o);
+                } catch (InvocationTargetException ex) {
+                    throw new RuntimeException("Something wrong with the getter of " + field.getName());
+                } catch (IllegalAccessException ex) {
+                    throw new RuntimeException(getPossibleGetter(field) + " is inaccessible");
+                }
+
+            } catch (Exception e) { // smth serious happened
                 throw new RuntimeException("Unknown error when building Json Object: " + o);
             }
 
             var type = field.getType();
-            if (value == null){
+            if (value == null) {
                 data.put(
                         field.getName(), JsonValue.NULL
                 );
@@ -108,51 +135,36 @@ public class JsonBuilder {
                 else
                     data.put(field.getName(), JsonValue.FALSE);
             } else if (type.isArray()) { // C-style array (Object[])
-                data.put(
-                        field.getName(), buildJsonArray(value)
-                );
-            }
-            else if (
+                data.put(field.getName(), buildJsonArray(value));
+            } else if (
                     type.equals(byte.class) || type.equals(Byte.class) ||
-                    type.equals(int.class) || type.equals(Integer.class) ||
-                    type.equals(long.class) || type.equals(Long.class) ||
-                    type.equals(float.class) || type.equals(Float.class) ||
-                    type.equals(double.class) || type.equals(Double.class)
+                            type.equals(int.class) || type.equals(Integer.class) ||
+                            type.equals(long.class) || type.equals(Long.class) ||
+                            type.equals(float.class) || type.equals(Float.class) ||
+                            type.equals(double.class) || type.equals(Double.class)
             ) {
-                data.put(
-                        field.getName(), buildJsonNumber((Number) value)
-                );
-            }
-            else if (
+                data.put(field.getName(), buildJsonNumber((Number) value));
+            } else if (
                     type.equals(char.class) || type.equals(Character.class) ||
-                    type.equals(String.class)
-            ){ // this is a final class so nothing to worry about
-                data.put(
-                        field.getName(), buildJsonString( new StringBuffer(String.valueOf(value)))
-                );
-            }
-            else
-                data.put(
-                        field.getName(), buildJsonObject(value)
-                );
+                            type.equals(String.class) || type.isEnum()
+            ) { // this is a final class so nothing to worry about
+                data.put(field.getName(), buildJsonString(value.toString()));
+            } else
+                data.put(field.getName(), buildJsonObject(value));
         }
 
         return new JsonObjectImpl(data);
     }
 
-    public JsonValue buildBoolean(boolean b){
-        return b ? JsonValue.TRUE : JsonValue.FALSE;
-    }
-
-
     public static void main(String[] args) {
         class A {
-            public int[] x;
+            public final int[] x;
+
             public A(int[] x) {
                 this.x = x;
             }
         }
-        class B extends A{
+        class B extends A {
             public B(int[] b) {
                 super(b);
             }
@@ -160,7 +172,13 @@ public class JsonBuilder {
 
         System.out.println(buildJsonArray(new int[][]{{1, 2}, {3, 4}}));
     }
-    static void testfunc(Object o){
+
+    static void testfunc(Object o) {
         System.out.println(o.getClass());
-    };
+    }
+
+    public JsonValue buildBoolean(boolean b) {
+        return b ? JsonValue.TRUE : JsonValue.FALSE;
+    }
+
 }

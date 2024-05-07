@@ -1,7 +1,5 @@
 package org.src.json.types;
 
-import java.io.Serial;
-
 public record JsonString(String value) implements JsonValue {
     @Override
     public ValueType getValueType() {
@@ -9,7 +7,7 @@ public record JsonString(String value) implements JsonValue {
     }
 
     @Override
-    public String toString(){
-        return "\"" + value + "\"";
+    public String toString() {
+        return value;
     }
 }

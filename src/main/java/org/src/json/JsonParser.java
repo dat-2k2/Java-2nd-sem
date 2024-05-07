@@ -11,7 +11,7 @@ import java.util.function.Predicate;
 
 public class JsonParser {
     static final Predicate<Character> isCharacter = character ->
-            character.compareTo('\u0020') >= 0
+            character.compareTo(' ') >= 0
                     && character.compareTo('"') != 0
                     && character.compareTo('\\') != 0;
     static final Predicate<Character> isWhiteSpace = character -> {
@@ -63,7 +63,7 @@ public class JsonParser {
     static final char BACKSLASH = '\\';
 
 
-    private StringBuffer buffer;
+    private final StringBuffer buffer;
     private int cursor;
 
     public JsonParser(StringBuffer buffer) {
@@ -78,6 +78,11 @@ public class JsonParser {
         } catch (ParseException e) {
             e.printStackTrace();
         }
+    }
+
+    public static JsonValue readValue(StringBuffer b) throws ParseException {
+        JsonParser reader = new JsonParser(b);
+        return reader.readJsonValue();
     }
 
     //supporting functions for the buffer
@@ -103,7 +108,7 @@ public class JsonParser {
      * @param predicate
      * @return lexeme matched the given condition
      */
-    String read(Predicate<Character> predicate){
+    String read(Predicate<Character> predicate) {
         StringBuilder result = new StringBuilder();
         while (hasNext() && predicate.test(peek())) {
             result.append(step());
@@ -113,6 +118,7 @@ public class JsonParser {
 
     /**
      * Look-ahead for pattern.
+     *
      * @param pattern
      * @return lexeme matched the given pattern
      */
@@ -131,8 +137,7 @@ public class JsonParser {
 
         if (result.toString().contentEquals(pattern))
             return result.toString();
-        else
-        {
+        else {
             this.cursor = oldCursor; // reset
             return "";
         }
@@ -187,6 +192,8 @@ public class JsonParser {
         return new JsonObjectImpl(result);
     }
 
+    //    Remember that value allows whitespace
+
     public JsonArray readJsonArray() throws ParseException {
         consumeWhiteSpace();
 
@@ -213,8 +220,6 @@ public class JsonParser {
 
         return new JsonArray(result.toArray(new JsonValue[0]));
     }
-
-    //    Remember that value allows whitespace
 
     public JsonValue readJsonValue() throws ParseException {
         consumeWhiteSpace();
@@ -243,38 +248,44 @@ public class JsonParser {
         }
     }
 
-    public static JsonValue readValue(StringBuffer b) throws ParseException {
-        JsonParser reader = new JsonParser(b);
-        return reader.readJsonValue();
-    }
-
     public JsonNumber readJsonNumber() throws ParseException {
         StringBuilder result = new StringBuilder();
         // integer part
         consumeWhiteSpace();
 
         if (!(peek() == NEGATIVE_MARK || isDigit.test(peek())))
-            throw new ParseException("Reading decimal part: Not a number value at position "+ cursor +": "
+            throw new ParseException("Reading decimal part: Not a number value at position " + cursor + ": "
                     + buffer.toString(), cursor);
 
-        if (peek() == NEGATIVE_MARK){
+        if (peek() == NEGATIVE_MARK) {
             result.append(step());
         }
-        result.append(read(isDigit));
+
+        if (!hasNext()){
+            throw new ParseException("Reading decimal part: Not a number value at position " + cursor + ": "
+                    + buffer.toString(), cursor);
+        }
+
+        if (!isOneNine.test(peek())){
+            result.append(step()); //zero
+        }
+        else {
+            result.append(read(isDigit));
+        }
 
         if (!(hasNext() &&
                 (peek() == DECIMAL_POINT || isExponent.test(peek())))
         )
-          return new JsonNumber(result.toString()); // return an int
+            return new JsonNumber(result.toString()); // return an int
 
         // fractional part
-        try{
+        try {
             if (peek() == DECIMAL_POINT) {
                 result.append(step());
                 result.append(read(isDigit));
             }
-        } catch (IndexOutOfBoundsException e){
-            throw new ParseException("Uncompleted fractional part at position "+ cursor +": "
+        } catch (IndexOutOfBoundsException e) {
+            throw new ParseException("Uncompleted fractional part at position " + cursor + ": "
                     + buffer.toString(), cursor);
         }
 
@@ -282,20 +293,19 @@ public class JsonParser {
             return new JsonNumber(result.toString()); // return a float/double
 
         // exponential part
-        try{
+        try {
             if (isExponent.test(peek())) {
                 result.append(step());
                 if (isSign.test(peek())) { //exp sign
                     result.append(step());
                 } else if (!isDigit.test(peek())) {//must be digit next
-                    throw new ParseException("Reading exponential part at position "+ cursor +": "
+                    throw new ParseException("Reading exponential part at position " + cursor + ": "
                             + buffer.toString(), cursor);
                 }
                 result.append(read(isDigit));
             }
-        }
-        catch (IndexOutOfBoundsException e){
-            throw new ParseException("Uncompleted exponential part:"+ cursor +": "
+        } catch (IndexOutOfBoundsException e) {
+            throw new ParseException("Uncompleted exponential part:" + cursor + ": "
                     + buffer.toString(), cursor);
         }
         // exponent part
