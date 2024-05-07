@@ -102,7 +102,8 @@ public class JsonBuilder {
             try {
                 value = field.get(o);
             } catch (IllegalAccessException e) {
-                throw new RuntimeException(getPossibleGetter(field) + " is inaccessible");
+                System.out.println(field.getName() + " is inaccessible, value will not be written into json");
+                continue;
             }
 
             var type = field.getType();
