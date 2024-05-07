@@ -5,6 +5,7 @@ import java.util.Arrays;
 
 /**
  * Immutable array
+ *
  * @param data
  */
 public record JsonArray(JsonValue[] data) implements JsonValue {

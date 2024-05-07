@@ -102,26 +102,7 @@ public class JsonBuilder {
             try {
                 value = field.get(o);
             } catch (IllegalAccessException e) {
-                Method possibleGetter;
-                try {
-                    possibleGetter = c.getMethod(getPossibleGetter(field));
-                } catch (NoSuchMethodException ex) {
-                    System.out.println("Couldn't find any getter named " + getPossibleGetter(field) + ", set the field value to null");
-                    data.put(field.getName(), JsonValue.NULL);
-                    continue;
-                }
-
-                try {
-                    possibleGetter.setAccessible(true);
-                    value = possibleGetter.invoke(o);
-                } catch (InvocationTargetException ex) {
-                    throw new RuntimeException("Something wrong with the getter of " + field.getName());
-                } catch (IllegalAccessException ex) {
-                    throw new RuntimeException(getPossibleGetter(field) + " is inaccessible");
-                }
-
-            } catch (Exception e) { // smth serious happened
-                throw new RuntimeException("Unknown error when building Json Object: " + o);
+                throw new RuntimeException(getPossibleGetter(field) + " is inaccessible");
             }
 
             var type = field.getType();
