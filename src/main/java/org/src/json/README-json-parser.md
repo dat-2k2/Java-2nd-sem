@@ -20,7 +20,7 @@ Parsing a JsonObject to a Java object requires access to its non-private non-arg
 ## Structure
 
 ### Types
-JSON has 7 main types: JsonObject, JsonString, JsonNumber, true, false, null and JsonValue (which is the supertype for others). For the grammar detail, see [ECMA-404](https://www.json.org/json-en.html).
+JSON has 7 main types: JsonObject, JsonArray, JsonString, JsonNumber, true, false, null and JsonValue (which is the supertype for others). For the grammar detail, see [ECMA-404](https://www.json.org/json-en.html).
 
 
 ### Utilities
