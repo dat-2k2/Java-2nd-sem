@@ -1,12 +1,9 @@
 package org.src.httpserver.bases;
 
-import java.util.Arrays;
-
 public enum HttpContentType {
-    APPLICATION,
+    APPLICATION_JSON("application/json"),
     MESSAGE,
-    MULTIPART,
-
+    MULTIPART_FORM_DATA("multipart/form-data"),
     PLAINTEXT("text/plain");
     final String type;
 
@@ -18,13 +15,14 @@ public enum HttpContentType {
         this.type = type;
     }
 
-    public static HttpContentType getType(String type){
-        for (var value: HttpContentType.values()){
-            if (value.type.equals(type))
+    public static HttpContentType getType(String type) {
+        for (var value : HttpContentType.values()) {
+            if (value.type.equalsIgnoreCase(type))
                 return value;
         }
         return null;
     }
+
     @Override
     public String toString() {
         return this.type;

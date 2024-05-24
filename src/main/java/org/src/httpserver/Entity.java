@@ -2,7 +2,6 @@ package org.src.httpserver;
 
 import org.src.httpserver.bases.HttpConstant;
 import org.src.httpserver.bases.HttpContentType;
-import org.src.httpserver.exceptions.InvalidHeader;
 import org.src.httpserver.exceptions.UnsupportedMediaType;
 
 import java.util.HashMap;
@@ -67,14 +66,5 @@ public abstract class Entity {
                 this.headers.put(field, value);
             }
         }
-    }
-
-    public void header(String s) throws InvalidHeader {
-        var pair = s.split(":");
-        if (s.length() < 2) {
-            throw new InvalidHeader(s);
-        }
-        headers.put(pair[0].replaceAll(" ", "")
-                , pair[1].replaceAll(" ", ""));
     }
 }
