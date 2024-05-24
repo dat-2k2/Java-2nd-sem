@@ -96,34 +96,38 @@ public class Server {
 
         //-----------Headers-------------------------------------
 
+        // headerBuffer is allocated with the number of bytes in the first transaction
+        // the buffer may LARGER THAN the real headers.
         var headerBuffer = ByteBuffer.allocate(headerRead);
         headerBuffer.put(0, readBuffer, 0, headerRead);
         var currentHeader = nextToken(headerBuffer);
 
-        System.out.println(new String(headerBuffer.array()));
         Request request = new Request();
 
         //get request line
         String[] field = currentHeader.split(String.valueOf(HttpConstant.SP));
         if (field.length < 3) {
-            this.log(client, null, HttpStatus.BadRequest);
-            client.write(ByteBuffer.wrap(new Response(HttpStatus.BadRequest).toString().getBytes()));
+            var badRequest = new Response(HttpStatus.BadRequest);
+            this.log(client, null, badRequest);
+            client.write(ByteBuffer.wrap(badRequest.toString().getBytes()));
             this.disconnectClient(key);
             return;
         }
         try {
             request.setMethod(HttpMethod.valueOf(field[0]));
         } catch (IllegalArgumentException e) {
-            this.log(client, null, HttpStatus.MethodNotAllowed);
-            client.write(ByteBuffer.wrap(new Response(HttpStatus.MethodNotAllowed).toString().getBytes()));
+            var methodNotAllowed = new Response(HttpStatus.MethodNotAllowed);
+            this.log(client, null, methodNotAllowed);
+            client.write(ByteBuffer.wrap(methodNotAllowed.toString().getBytes()));
             this.disconnectClient(key);
             return;
         }
         request.setRequestURI(field[1]);
         var version = HttpVersion.get(field[2]);
         if (version == null) {
-            this.log(client, null, HttpStatus.HTTPVersionNotSupported);
-            client.write(ByteBuffer.wrap(new Response(HttpStatus.HTTPVersionNotSupported).toString().getBytes()));
+            var httpVersionNotSupported = new Response(HttpStatus.HTTPVersionNotSupported);
+            this.log(client, null, httpVersionNotSupported);
+            client.write(ByteBuffer.wrap(httpVersionNotSupported.toString().getBytes()));
             this.disconnectClient(key);
             return;
         }
@@ -144,61 +148,57 @@ public class Server {
                             , pair[1].replaceAll(" ", ""));
 
                 } catch (InvalidHeader e) {
-                    this.log(client, request, HttpStatus.BadRequest);
-                    client.write(ByteBuffer.wrap(HttpStatus.BadRequest.toString().getBytes()));
+                    var badRequest = new Response(HttpStatus.BadRequest);
+                    this.log(client, null, badRequest);
+                    client.write(ByteBuffer.wrap(badRequest.toString().getBytes()));
                     this.disconnectClient(key);
                     return;
                 } catch (UnsupportedMediaType e) {
-                    this.log(client, request, HttpStatus.UnsupportedMediaType);
-                    client.write(ByteBuffer.wrap(HttpStatus.UnsupportedMediaType.toString().getBytes()));
+                    var unsupportedMediaType = new Response(HttpStatus.UnsupportedMediaType);
+                    this.log(client, request, unsupportedMediaType);
+                    client.write(ByteBuffer.wrap(unsupportedMediaType.toString().getBytes()));
                     this.disconnectClient(key);
                     return;
                 }
             } catch (BufferUnderflowException e) { //end without double CRLF
                 if (headerBuffer.limit() == MAX_REQUEST_HEADERS_LENGTH) { // overflow
-                    this.log(client, request, HttpStatus.RequestHeaderFieldsTooLarge);
-                    client.write(ByteBuffer.wrap(HttpStatus.RequestHeaderFieldsTooLarge.toString().getBytes()));
+                    var requestHeaderFieldsTooLarge = new Response(HttpStatus.RequestHeaderFieldsTooLarge);
+                    this.log(client, request, requestHeaderFieldsTooLarge);
+                    client.write(ByteBuffer.wrap(requestHeaderFieldsTooLarge.toString().getBytes()));
                     this.disconnectClient(key);
                     return;
                 }
 
-                // wrong syntax
-                this.log(client, request, HttpStatus.BadRequest);
-                client.write(ByteBuffer.wrap(HttpStatus.BadRequest.toString().getBytes()));
+                var badRequest = new Response(HttpStatus.BadRequest);
+                this.log(client, null, badRequest);
+                client.write(ByteBuffer.wrap(badRequest.toString().getBytes()));
                 this.disconnectClient(key);
                 return;
             }
         }
-
+        // From this position in the readBuffer counts the bodyBuffer
+        int bodyOffset = headerBuffer.position();
 //        ------------------------Body---------------------------------------------------
-        client.read(readBuffer);
-        var bodyBufferSize = MAX_BODY_LENGTH;
+
+        client.read(readBuffer); // maybe some more
+        var bodyBufferSize = readBuffer.position() - bodyOffset;
         if (request.contentLength > 0) {
             bodyBufferSize = request.contentLength;
             if (bodyBufferSize > MAX_BODY_LENGTH) {
-                this.log(client, request, HttpStatus.RequestEntityTooLarge);
-                client.write(ByteBuffer.wrap(HttpStatus.RequestEntityTooLarge.toString().getBytes()));
+                var requestEntityTooLarge = new Response(HttpStatus.RequestEntityTooLarge);
+                this.log(client, request, requestEntityTooLarge);
+                client.write(ByteBuffer.wrap(requestEntityTooLarge.toString().getBytes()));
                 this.disconnectClient(key);
                 return;
             }
         }
 
         ByteBuffer bodyBuffer = ByteBuffer.allocate(bodyBufferSize);
-        bodyBuffer.put(0, readBuffer, headerBuffer.position(), bodyBufferSize);
-
-        try {
-            client.read(bodyBuffer);
-        } catch (BufferOverflowException e) {
-            this.log(client, request, HttpStatus.RequestEntityTooLarge);
-            client.write(ByteBuffer.wrap(HttpStatus.RequestEntityTooLarge.toString().getBytes()));
-            this.disconnectClient(key);
-            return;
-        }
+        bodyBuffer.put(0, readBuffer, bodyOffset, bodyBufferSize);
 
         // Attach body into request
         // Does it need to check backing array existence ?
         request.body(bodyBuffer.array());
-
         // Response
         Response response = this.router.respond(request);
 
@@ -213,7 +213,6 @@ public class Server {
 
     /**
      * Disconnect client socket and close connection on the given key.
-     *
      * @param key of current event from selector
      */
     private void disconnectClient(SelectionKey key) {
@@ -230,8 +229,7 @@ public class Server {
 
     /**
      * Accept new connection from client.
-     *
-     * @param key is select key contains socket channel from client
+     * @param key selection key of the client channel
      */
     private void accept(SelectionKey key) throws IOException {
         SocketChannel client = this.listener.accept();
@@ -252,9 +250,9 @@ public class Server {
             }
 
             Set<SelectionKey> selectedKeys = selector.selectedKeys();
-            Iterator<SelectionKey> iter = selectedKeys.iterator();
-            while (iter.hasNext()) {
-                SelectionKey key = iter.next();
+            Iterator<SelectionKey> it = selectedKeys.iterator();
+            while (it.hasNext()) {
+                SelectionKey key = it.next();
                 try {
                     if (key.isAcceptable())
                         this.accept(key);
@@ -264,7 +262,7 @@ public class Server {
                     // Cancelled key
                     continue;
                 }
-                iter.remove();
+                it.remove();
             }
         }
     }
@@ -278,40 +276,27 @@ public class Server {
             for (SocketChannel connection : this.connections)
                 connection.close();
         } catch (IOException error) {
-        }
-    }
 
-    /**
-     * Shortcut of log for response.
-     */
-    private void log(SocketChannel client, Request request, Response response) {
-        this.log(client, request, response.status);
+        }
     }
 
     /**
      * Log server action.
      *
-     * @param client         socket channel
-     * @param request        parsed from client
-     * @param responseStatus status generated from application
+     * @param client socket channel
+     * @param request incoming request, null if the response is BadRequest
+     * @param response response
      */
 
-    private void log(SocketChannel client, Request request, HttpStatus responseStatus) {
-        String uri = "?";
-        String method = "?";
-        if (request != null) {
-            uri = request.requestURI;
-            method = request.method.toString();
-        }
+    private void log(SocketChannel client, Request request, Response response) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
         LocalDateTime now = LocalDateTime.now();
         try {
-            System.out.printf("%s %s - %s %s > %s%n",
+            System.out.printf("%s %s > \n%s\n < %s\n\n",
                     formatter.format(now),
                     client.getRemoteAddress().toString().substring(1),
-                    method,
-                    uri,
-                    responseStatus);
+                    request,
+                    response);
         } catch (IOException error) {
 
         }

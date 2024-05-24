@@ -1,10 +1,10 @@
 package org.src.httpserver.bases;
 
 public enum HttpVersion {
-    HTTP11(1, 1);
+    HTTP_1_1(1, 1);
 
-    int major;
-    int minor;
+    final int major;
+    final int minor;
 
     HttpVersion(int major, int minor) {
         if (major < 0 && minor < 0)
@@ -13,14 +13,15 @@ public enum HttpVersion {
         this.minor = minor;
     }
 
-    public static HttpVersion get(String version){
-        for (var v : HttpVersion.values()){
-            if (v.toString().equals(version)){
+    public static HttpVersion get(String version) {
+        for (var v : HttpVersion.values()) {
+            if (v.toString().equals(version)) {
                 return v;
             }
         }
         return null;
     }
+
     @Override
     public String toString() {
         return "HTTP/" + major + "." + minor;

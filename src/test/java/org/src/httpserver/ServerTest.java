@@ -4,12 +4,14 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.src.A;
+import org.src.httpserver.bases.HttpContentType;
 import org.src.httpserver.bases.HttpMethod;
 import org.src.httpserver.bases.HttpStatus;
 import org.src.json.JsonBuilder;
 import org.src.json.JsonConverter;
 import org.src.json.JsonParser;
 import org.src.json.JsonWriter;
+
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -18,7 +20,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.text.ParseException;
-import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -77,7 +78,7 @@ class ServerTest {
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("http://localhost:6969/jsonTest"))
-                .header("Content-Type", "application")
+                .header("Content-Type", HttpContentType.APPLICATION_JSON.toString())
                 .version(HttpClient.Version.HTTP_1_1)
                 .POST(HttpRequest.BodyPublishers.ofString(
                         JsonWriter.writeJsonValue(JsonBuilder.buildJsonObject(testObject))
@@ -85,7 +86,6 @@ class ServerTest {
                 )
                 .build();
 
-        System.out.println("request:");
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         assertEquals(response.statusCode(), HttpStatus.OK.code);
     }
