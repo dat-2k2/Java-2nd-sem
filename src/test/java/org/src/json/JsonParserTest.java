@@ -30,18 +30,20 @@ class JsonParserTest {
     @ValueSource(strings = {"\"hello-world\"", "[\"hello-world\"]", "5.234234","232342","-3232","-23423.23423","0","-1E12312","1e12312"})
     public void testReadJsonValue(String str) throws ParseException{
         JsonParser.readValue(new StringBuffer(str));
-    };
+    }
 
     @ParameterizedTest
     @ValueSource(strings = {"[\"hello-world\"]"})
     public void testReadJsonArray(String str) throws ParseException {
         JsonConverter.parseArray(JsonParser.readValue(new StringBuffer(str)), String.class);
-    };
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"\"hello-world\""})
     public void testReadJsonString(String str) throws ParseException {
         JsonConverter.parseString(JsonParser.readValue(new StringBuffer(str)));
-    };
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"5.234234","232342","-3232","-23423.23423","0","-1E12312","1.1231e12312"})
     public void testReadJsonNumber(String str) throws ParseException{

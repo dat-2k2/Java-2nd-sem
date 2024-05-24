@@ -37,8 +37,6 @@ public class A {
         );
     }
 
-    ;
-
     public A(A a10) {
         this.a1 = 5;
         this.a2 = -10000000000000L;
