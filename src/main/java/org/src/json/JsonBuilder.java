@@ -4,8 +4,6 @@ import org.src.json.types.*;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -32,6 +30,7 @@ public class JsonBuilder {
      * @param array
      * @return
      */
+
     public static JsonArray buildJsonArray(Object array) {
         if (!array.getClass().isArray()) {
             throw new ClassCastException("Not a C-style array");
@@ -134,11 +133,11 @@ public class JsonBuilder {
             } else
                 data.put(field.getName(), buildJsonObject(value));
         }
-
         return new JsonObjectImpl(data);
     }
 
     public static void main(String[] args) {
+
         class A {
             public final int[] x;
 

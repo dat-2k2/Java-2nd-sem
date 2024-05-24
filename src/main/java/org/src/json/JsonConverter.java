@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Objects;
 
 public class JsonConverter {
-    static byte parseByte(JsonValue o) {
+    public static byte parseByte(JsonValue o) {
         if (o.getValueType() == JsonValue.ValueType.NULL)
             throw new NullPointerException("Null value when parsing to integer");
 
@@ -20,7 +20,7 @@ public class JsonConverter {
         return numVal.byteValue();
     }
 
-    static short parseShort(JsonValue o) {
+    public static short parseShort(JsonValue o) {
         if (o.getValueType() == JsonValue.ValueType.NULL)
             throw new NullPointerException("Null value when parsing to integer");
 
@@ -31,7 +31,7 @@ public class JsonConverter {
         return numVal.shortValue();
     }
 
-    static int parseInt(JsonValue o) {
+    public static int parseInt(JsonValue o) {
         if (o.getValueType() == JsonValue.ValueType.NULL)
             throw new NullPointerException("Null value when parsing to integer");
 
@@ -42,7 +42,7 @@ public class JsonConverter {
         return numVal.intValue();
     }
 
-    static double parseDouble(JsonValue o) {
+    public static double parseDouble(JsonValue o) {
         if (o.getValueType() == JsonValue.ValueType.NULL)
             throw new NullPointerException("Null value when parsing to double");
         if (o.getValueType() != JsonValue.ValueType.NUMBER)
@@ -52,7 +52,7 @@ public class JsonConverter {
         return numVal.doubleValue();
     }
 
-    static float parseFloat(JsonValue o) {
+    public static float parseFloat(JsonValue o) {
         if (o.getValueType() == JsonValue.ValueType.NULL)
             throw new NullPointerException("Null value when parsing to float");
         if (o.getValueType() != JsonValue.ValueType.NUMBER)
@@ -62,7 +62,7 @@ public class JsonConverter {
         return numVal.floatValue();
     }
 
-    static long parseLong(JsonValue o) {
+    public static long parseLong(JsonValue o) {
         if (o.getValueType() == JsonValue.ValueType.NULL)
             throw new NullPointerException("Null value when parsing to long");
         if (o.getValueType() != JsonValue.ValueType.NUMBER)
@@ -79,7 +79,7 @@ public class JsonConverter {
      * Currently does not support inner class fields.
      */
 
-    static <T> T parseObject(JsonValue v, Class<T> c) throws InvocationTargetException {
+    public static <T> T parseObject(JsonValue v, Class<T> c) throws InvocationTargetException {
         //TODO: construct object
 
         if (v.getValueType() == JsonValue.ValueType.NULL)
@@ -99,7 +99,6 @@ public class JsonConverter {
         } catch (IllegalAccessException e) {
             throw new RuntimeException("Non-argument constructor of class " + c.getName() + " is inaccessible");
         }
-
 
         for (var fname : o.keySet()) {
             try {
@@ -171,7 +170,7 @@ public class JsonConverter {
         return result;
     }
 
-    static String parseString(JsonValue o) throws ClassCastException {
+    public static String parseString(JsonValue o) throws ClassCastException {
         if (o.getValueType() == JsonValue.ValueType.NULL)
             return null;
         if (o.getValueType() != JsonValue.ValueType.STRING)
@@ -181,7 +180,7 @@ public class JsonConverter {
     }
 
     //    require class to have proper setters.
-    static <T> T[] parseArray(JsonValue o, Class<T> c) throws ClassCastException {
+    public static <T> T[] parseArray(JsonValue o, Class<T> c) throws ClassCastException {
         if (o.getValueType() == JsonValue.ValueType.NULL)
             return null;
         if (o.getValueType() != JsonValue.ValueType.ARRAY)
@@ -192,7 +191,7 @@ public class JsonConverter {
         ).toArray((T[]) Array.newInstance(c, 0));
     }
 
-    static <T> List<T> parseCollection(JsonValue o, Class<T> c, Class<? extends List> collectionType) {
+    public static <T> List<T> parseCollection(JsonValue o, Class<T> c, Class<? extends List> collectionType) {
         if (o.getValueType() == JsonValue.ValueType.NULL)
             return null;
         if (o.getValueType() != JsonValue.ValueType.ARRAY)
@@ -250,7 +249,7 @@ public class JsonConverter {
         }
     }
 
-    static boolean parseBoolean(JsonValue o) {
+    public static boolean parseBoolean(JsonValue o) {
         return switch (o.getValueType()) {
             case FALSE -> false;
             case TRUE -> true;
@@ -258,7 +257,7 @@ public class JsonConverter {
         };
     }
 
-    static Object parseNull(JsonValue o) {
+    public static Object parseNull(JsonValue o) {
         return switch (o.getValueType()) {
             case NULL -> null;
             default -> throw new ClassCastException("Not a null value: " + o);
