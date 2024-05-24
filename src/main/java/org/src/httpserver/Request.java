@@ -1,8 +1,7 @@
 package org.src.httpserver;
-import org.src.httpserver.bases.HttpConstant;
+
 import org.src.httpserver.bases.HttpMethod;
 import org.src.httpserver.bases.HttpVersion;
-import org.src.httpserver.exceptions.MethodNotAllowed;
 
 /**
  * https://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01.html#Request
@@ -14,9 +13,13 @@ public class Request extends Entity {
      * Request-Line
      */
     HttpMethod method;
-//    Using absolute path.
+    //    Using absolute path.
     String requestURI;
-    HttpVersion version = HttpVersion.HTTP11;
+    HttpVersion version = HttpVersion.HTTP_1_1;
+
+    public static void main(String[] args) {
+
+    }
 
     public HttpMethod getHttpMethod() {
         return method;
@@ -36,9 +39,5 @@ public class Request extends Entity {
 
     public void setRequestURI(String requestURI) {
         this.requestURI = requestURI;
-    }
-
-    public static void main(String[] args) {
-
     }
 }

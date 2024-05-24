@@ -1,5 +1,5 @@
 package org.src.httpserver;
-import org.src.httpserver.bases.HttpContentType;
+
 import org.src.httpserver.bases.HttpStatus;
 import org.src.httpserver.bases.HttpVersion;
 
@@ -10,7 +10,7 @@ import static org.src.httpserver.bases.HttpConstant.SP;
  * https://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01.html#Response
  */
 public class Response extends Entity {
-    HttpVersion version = HttpVersion.HTTP11;
+    HttpVersion version = HttpVersion.HTTP_1_1;
     HttpStatus status;
 
     public Response(HttpStatus status) {
@@ -18,7 +18,7 @@ public class Response extends Entity {
     }
 
     @Override
-    public String toString(){
+    public String toString() {
         return version.toString() + SP + status.toString() + CRLF //status-line
                 + super.toString();
     }

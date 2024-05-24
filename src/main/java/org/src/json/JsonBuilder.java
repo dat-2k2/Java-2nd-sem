@@ -88,9 +88,6 @@ public class JsonBuilder {
 
         Class<?> c = o.getClass();
         Field[] f = c.getDeclaredFields();
-        for (Field field : f) {
-            System.out.println(field.getName());
-        }
         Map<String, JsonValue> data = new HashMap<>();
 
         for (var field : f) {
@@ -136,27 +133,8 @@ public class JsonBuilder {
         return new JsonObjectImpl(data);
     }
 
-    public static void main(String[] args) {
 
-        class A {
-            public final int[] x;
 
-            public A(int[] x) {
-                this.x = x;
-            }
-        }
-        class B extends A {
-            public B(int[] b) {
-                super(b);
-            }
-        }
-
-        System.out.println(buildJsonArray(new int[][]{{1, 2}, {3, 4}}));
-    }
-
-    static void testfunc(Object o) {
-        System.out.println(o.getClass());
-    }
 
     public JsonValue buildBoolean(boolean b) {
         return b ? JsonValue.TRUE : JsonValue.FALSE;
