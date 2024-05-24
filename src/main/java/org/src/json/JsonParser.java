@@ -193,7 +193,6 @@ public class JsonParser {
     }
 
     //    Remember that value allows whitespace
-
     public JsonArray readJsonArray() throws ParseException {
         consumeWhiteSpace();
 
@@ -261,15 +260,14 @@ public class JsonParser {
             result.append(step());
         }
 
-        if (!hasNext()){
+        if (!hasNext()) {
             throw new ParseException("Reading decimal part: Not a number value at position " + cursor + ": "
                     + buffer.toString(), cursor);
         }
 
-        if (!isOneNine.test(peek())){
+        if (!isOneNine.test(peek())) {
             result.append(step()); //zero
-        }
-        else {
+        } else {
             result.append(read(isDigit));
         }
 

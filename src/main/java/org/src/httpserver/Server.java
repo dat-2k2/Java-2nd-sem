@@ -5,34 +5,31 @@ import org.src.httpserver.bases.HttpMethod;
 import org.src.httpserver.bases.HttpStatus;
 import org.src.httpserver.bases.HttpVersion;
 import org.src.httpserver.exceptions.InvalidHeader;
-import org.src.httpserver.exceptions.MethodNotAllowed;
 import org.src.httpserver.exceptions.UnsupportedMediaType;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.BufferOverflowException;
 import java.nio.BufferUnderflowException;
-import java.nio.CharBuffer;
-import java.nio.channels.Selector;
 import java.nio.ByteBuffer;
-import java.nio.channels.ClosedSelectorException;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
 
 public class Server {
 
     // Max data size for a single HTTP/1.1 request header
     public static int MAX_REQUEST_HEADERS_LENGTH = 8190; //Apache
     public static int MAX_BODY_LENGTH = 2 * 1024 * 1024; // 2MB
+    public final InetSocketAddress address;
+    final Router router;
     private final Selector selector;
     private final ServerSocketChannel listener;
     private final Set<SocketChannel> connections;
-    private final Router router;
-    public final InetSocketAddress address;
 
 
     public Server(Router router, String address, Integer port) throws IOException {
@@ -51,33 +48,33 @@ public class Server {
      * Read the next token from a char buffer, also move the cursor of the char buffer to right after the crlf
      * (also the head of next token)
      * If an invalid token is at the end of the buffer, it will throw a BufferUnderflowException.
+     *
      * @param s the buffer which token is extracted from
      * @return the next token
      */
-    private static String nextToken(ByteBuffer s) throws BufferUnderflowException{
+    private static String nextToken(ByteBuffer s) throws BufferUnderflowException {
         StringBuilder token = new StringBuilder();
         byte reg1 = 0;
         byte reg2 = 0;
-        while (reg1 != HttpConstant.CR || reg2 != HttpConstant.LF){
+        while (reg1 != HttpConstant.CR || reg2 != HttpConstant.LF) {
             reg1 = reg2;
             reg2 = s.get();
             token.append((char) reg2);
         }
-        token.delete(token.length()-2,token.length());
+        token.delete(token.length() - 2, token.length());
         return token.toString();
     }
 
     public static void main(String[] args) {
-        var str = new StringBuilder()
-                .append("abc")
-                .append(HttpConstant.CRLF)
-                .append(HttpConstant.CRLF)
-                .append("abc").toString();
+        var str = "abc" +
+                HttpConstant.CRLF +
+                HttpConstant.CRLF +
+                "abc";
         byte[] test = str.getBytes();
         System.out.println(HttpStatus.LengthRequired);
         System.out.println(Arrays.toString(test));
         ByteBuffer t = ByteBuffer.allocate(10);
-        byte[] bts = new byte[]{1,2,3};
+        byte[] bts = new byte[]{1, 2, 3};
         t.get(bts);
         System.out.println(t.position());
         System.out.println(t.position());
@@ -86,9 +83,9 @@ public class Server {
 
     private void serve(SelectionKey key) throws IOException {
         SocketChannel client = (SocketChannel) key.channel();
-        ByteBuffer headerBuffer = ByteBuffer.allocate(MAX_REQUEST_HEADERS_LENGTH);
+        ByteBuffer readBuffer = ByteBuffer.allocate(MAX_REQUEST_HEADERS_LENGTH + MAX_BODY_LENGTH);
 
-        int headerRead = client.read(headerBuffer);
+        int headerRead = client.read(readBuffer);
         // If client suddenly closes connection
         if (headerRead == -1) {
             System.out.println("No data");
@@ -98,24 +95,25 @@ public class Server {
         // TODO: Read until the header buffer is full to avoid information loss.
 
         //-----------Headers-------------------------------------
-        
-        var headerParsingBuffer = ByteBuffer.allocate(headerRead);
-        headerParsingBuffer.put(0,headerBuffer,0,headerRead);
-        var currentHeader = nextToken(headerParsingBuffer);
 
+        var headerBuffer = ByteBuffer.allocate(headerRead);
+        headerBuffer.put(0, readBuffer, 0, headerRead);
+        var currentHeader = nextToken(headerBuffer);
+
+        System.out.println(new String(headerBuffer.array()));
         Request request = new Request();
 
         //get request line
         String[] field = currentHeader.split(String.valueOf(HttpConstant.SP));
-        if (field.length < 3){
+        if (field.length < 3) {
             this.log(client, null, HttpStatus.BadRequest);
             client.write(ByteBuffer.wrap(new Response(HttpStatus.BadRequest).toString().getBytes()));
             this.disconnectClient(key);
             return;
         }
-        try{
+        try {
             request.setMethod(HttpMethod.valueOf(field[0]));
-        } catch (IllegalArgumentException e){
+        } catch (IllegalArgumentException e) {
             this.log(client, null, HttpStatus.MethodNotAllowed);
             client.write(ByteBuffer.wrap(new Response(HttpStatus.MethodNotAllowed).toString().getBytes()));
             this.disconnectClient(key);
@@ -123,7 +121,7 @@ public class Server {
         }
         request.setRequestURI(field[1]);
         var version = HttpVersion.get(field[2]);
-        if (version == null){
+        if (version == null) {
             this.log(client, null, HttpStatus.HTTPVersionNotSupported);
             client.write(ByteBuffer.wrap(new Response(HttpStatus.HTTPVersionNotSupported).toString().getBytes()));
             this.disconnectClient(key);
@@ -132,18 +130,18 @@ public class Server {
 
 
         // get each header
-        while (!currentHeader.isEmpty()){
-            try{
-                currentHeader = nextToken(headerParsingBuffer);
+        while (!currentHeader.isEmpty()) {
+            try {
+                currentHeader = nextToken(headerBuffer);
                 if (currentHeader.isEmpty())
                     break;
-                try{
+                try {
                     var pair = currentHeader.split(":");
-                    if (currentHeader.length() < 2){
+                    if (currentHeader.length() < 2) {
                         throw new InvalidHeader(currentHeader);
                     }
-                    request.header(pair[0].replaceAll(" ","")
-                            ,pair[1].replaceAll(" ",""));
+                    request.header(pair[0].replaceAll(" ", "")
+                            , pair[1].replaceAll(" ", ""));
 
                 } catch (InvalidHeader e) {
                     this.log(client, request, HttpStatus.BadRequest);
@@ -156,8 +154,8 @@ public class Server {
                     this.disconnectClient(key);
                     return;
                 }
-            } catch (BufferUnderflowException e){ //end without double CRLF
-                if (headerParsingBuffer.limit() == MAX_REQUEST_HEADERS_LENGTH){ // overflow
+            } catch (BufferUnderflowException e) { //end without double CRLF
+                if (headerBuffer.limit() == MAX_REQUEST_HEADERS_LENGTH) { // overflow
                     this.log(client, request, HttpStatus.RequestHeaderFieldsTooLarge);
                     client.write(ByteBuffer.wrap(HttpStatus.RequestHeaderFieldsTooLarge.toString().getBytes()));
                     this.disconnectClient(key);
@@ -173,17 +171,24 @@ public class Server {
         }
 
 //        ------------------------Body---------------------------------------------------
+        client.read(readBuffer);
         var bodyBufferSize = MAX_BODY_LENGTH;
-        if (request.contentLength > 0){
+        if (request.contentLength > 0) {
             bodyBufferSize = request.contentLength;
+            if (bodyBufferSize > MAX_BODY_LENGTH) {
+                this.log(client, request, HttpStatus.RequestEntityTooLarge);
+                client.write(ByteBuffer.wrap(HttpStatus.RequestEntityTooLarge.toString().getBytes()));
+                this.disconnectClient(key);
+                return;
+            }
         }
-        ByteBuffer bodyBuffer = ByteBuffer.allocate(bodyBufferSize);
 
-        // Retrieve remaining content from the header buffer and push it to the body.
-        bodyBuffer.put(headerBuffer);
+        ByteBuffer bodyBuffer = ByteBuffer.allocate(bodyBufferSize);
+        bodyBuffer.put(0, readBuffer, headerBuffer.position(), bodyBufferSize);
+
         try {
             client.read(bodyBuffer);
-        } catch (BufferOverflowException e){
+        } catch (BufferOverflowException e) {
             this.log(client, request, HttpStatus.RequestEntityTooLarge);
             client.write(ByteBuffer.wrap(HttpStatus.RequestEntityTooLarge.toString().getBytes()));
             this.disconnectClient(key);
@@ -208,6 +213,7 @@ public class Server {
 
     /**
      * Disconnect client socket and close connection on the given key.
+     *
      * @param key of current event from selector
      */
     private void disconnectClient(SelectionKey key) {
@@ -224,6 +230,7 @@ public class Server {
 
     /**
      * Accept new connection from client.
+     *
      * @param key is select key contains socket channel from client
      */
     private void accept(SelectionKey key) throws IOException {
@@ -271,7 +278,6 @@ public class Server {
             for (SocketChannel connection : this.connections)
                 connection.close();
         } catch (IOException error) {
-            return;
         }
     }
 
@@ -284,8 +290,9 @@ public class Server {
 
     /**
      * Log server action.
-     * @param client socket channel
-     * @param request parsed from client
+     *
+     * @param client         socket channel
+     * @param request        parsed from client
      * @param responseStatus status generated from application
      */
 

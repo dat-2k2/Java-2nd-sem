@@ -2,6 +2,7 @@ package org.src.json;
 
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.src.A;
 
 import java.lang.reflect.InvocationTargetException;
 import java.text.ParseException;
