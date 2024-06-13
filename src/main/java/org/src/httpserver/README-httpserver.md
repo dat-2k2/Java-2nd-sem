@@ -6,34 +6,27 @@ This is a simple implementation of HTTP 1.1 protocol using ServerSocketChannel.
 
 ## Request and Response
 
-Request and Response are implemented in 2 classes with that names. They all have the first line, the headers and the
+Request and Response are implemented in 2 classes with the same names, respectively. Each has the first line, the headers and the
 body.
 
-There are several grammar for headers in the original docs, here only implemented the Entity-Header with structure _(
+There are several grammars for headers in the original docs, here only implemented the Entity-Header with structure _(
 field:value CRLF)\*_
 
-The body is only a sequence of bytes. For structural data like JSON the JSON package in this repos can be used.
+The body is only a sequence of bytes. For structural data like JSON, the JSON package in this repos can be used.
 
 ## Server
+The Server serves clients in turn: iterates over each listened client (key). Each data stream coming in a channel is wrapped into a Request object, which then be fed to the handling function. Response message is serialized from the result - a Response object. After sending the message, the key will be removed.
 
-The Server serves clients in turn: iterates over each listened client (key). Each Request coming in a channel is
-responded by a Response by _serve()_, then the key will be removed.
-The Request and Response act like converters, which extracts information from the binary data sequence read from each
-channel. The data from the Request is passed to a functional object called Handler, which was registered by the Router
-of the server.
-
+Handling functions are registered before starting the server. A handling function is a functional object which receives a Request object and returns a Response object.
 ## Limitation
-
-- When the connection is unstable, headers may not be fully transferred and error will be invoked. In other word, this
-  server only works well when the connection is stable for the headers to be sent a whole in one time.
+The server only works well when the connection is stable, which guarantees for the message to be transferred successfully in one time, due to the lack of retransmission support of the Server.
 
 ## Using
-
 This server is adapted with the java.net HttpClient, HttpResponse and HttpRequest. The Server is initialized with a
 host, a port and a Router object. Handling functions are registered with the Router.
 
 Examples are written in the test package. The Request and Response are guaranteed to be true because the serialized data
-from HttpRequest and HttpResponse can be deserialized to them.
+from HttpRequest and HttpResponse can be deserialized into them.
 
 ## References
 
